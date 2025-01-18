@@ -1,8 +1,49 @@
 <!-- sidebar.html -->
 <!DOCTYPE html>
 <html>
+
+<head>
+    <style>
+        #pageInfo {
+            padding: 10px;
+            background-color: #e8eaf6;
+            border-bottom: 1px solid #c5cae9;
+            font-size: 0.9em;
+        }
+
+        #pageTitle {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        #pageUrl {
+            word-break: break-all;
+            color: #3f51b5;
+            font-size: 0.9em;
+        }
+
+        #selectedText {
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #f5f5f5;
+            border-left: 4px solid #4CAF50;
+            font-style: italic;
+        }
+
+        #explanation {
+            padding: 10px;
+        }
+    </style>
+</head>
+
 <body>
+    <div id="pageInfo">
+        <div id="pageTitle"></div>
+        <div id="pageUrl"></div>
+    </div>
+    <div id="selectedText">No text selected</div>
     <div id="explanation">Select text on the page to get an explanation.</div>
     <script src="sidepanel.js"></script>
 </body>
+
 </html>

@@ -17,10 +17,19 @@ chrome.runtime.onMessage.addListener((message, sender) => {
                 path: 'sidepanel.html',
                 enabled: true
             });
+            if (message.selectedText) {
+                await chrome.storage.local.set({
+                    [`selectedText_${sender.tab.id}`]: message.selectedText,
+                    [`pageInfo_${sender.tab.id}`]: message.pageInfo
+                });
+            }
+            openSidePanelTabs.add(sender.tab.id);
         } else if (message.action === 'showExplanation') {
             // Store the explanation with the tab ID
             await chrome.storage.local.set({
-                [`explanation_${sender.tab.id}`]: message.explanation
+                [`explanation_${sender.tab.id}`]: message.explanation,
+                [`selectedText_${sender.tab.id}`]: message.selectedText,
+                [`pageInfo_${sender.tab.id}`]: message.pageInfo
             });
         }
     })();

@@ -35,7 +35,7 @@ async function askChatGPT(selectedText, context) {
                 model: "gpt-4o-mini",
                 messages: [{
                     role: "user",
-                    content: `Explain "${selectedText}" with the context of this text: ${context}`
+                    content: `Concisely explain "${selectedText}" with the context of this text: ${context}`
                 }],
                 max_tokens: 5000
             })
@@ -61,9 +61,17 @@ async function explainSelection() {
         return;
     }
 
+    const pageInfo = {
+        url: window.location.href,
+        title: document.title
+    };
+
     try {
-        // Just send the message to open the side panel
-        await chrome.runtime.sendMessage({ type: 'open_side_panel' });
+        await chrome.runtime.sendMessage({
+            type: 'open_side_panel',
+            selectedText: selectedText,
+            pageInfo: pageInfo
+        });
     } catch (error) {
         console.error('Error opening side panel:', error);
     }
@@ -71,11 +79,11 @@ async function explainSelection() {
     const pageContext = getAllPageText();
     const explanation = await askChatGPT(selectedText, pageContext);
 
-    // Send the explanation to the service worker
-    // The service worker will get the tabId from sender.tab.id
     chrome.runtime.sendMessage({
         action: 'showExplanation',
-        explanation: explanation
+        selectedText: selectedText,
+        explanation: explanation,
+        pageInfo: pageInfo
     });
 }
 
