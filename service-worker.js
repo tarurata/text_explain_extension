@@ -7,6 +7,11 @@ chrome.runtime.onInstalled.addListener(() => {
         title: 'Open side panel',
         contexts: ['all']
     });
+    chrome.contextMenus.create({
+        id: 'explainSelection',
+        title: 'Explain Selection',
+        contexts: ['selection']
+    });
 });
 
 chrome.runtime.onMessage.addListener((message, sender) => {
@@ -27,9 +32,9 @@ chrome.runtime.onMessage.addListener((message, sender) => {
                 });
             }
             openSidePanelTabs.add(sender.tab.id);
-//        } else if (message.type === 'close_side_panel') {
-//            await chrome.sidePanel.setOptions({ enabled: false });
-//            //openSidePanelTabs.delete(sender.tab.id);
+            //        } else if (message.type === 'close_side_panel') {
+            //            await chrome.sidePanel.setOptions({ enabled: false });
+            //            //openSidePanelTabs.delete(sender.tab.id);
         } else if (message.action === 'showExplanation') {
             // Store the explanation with the tab ID
             await chrome.storage.local.set({
@@ -44,4 +49,11 @@ chrome.runtime.onMessage.addListener((message, sender) => {
 // Clean up when tabs are closed
 chrome.tabs.onRemoved.addListener((tabId) => {
     openSidePanelTabs.delete(tabId);
+});
+
+// Handle context menu clicks
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+    if (info.menuItemId === 'explainSelection') {
+        chrome.tabs.sendMessage(tab.id, { type: 'contextMenuClick' });
+    }
 });

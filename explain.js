@@ -100,21 +100,26 @@ async function explainSelection() {
     });
 }
 
+// Listen for messages from the context menu click
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.type === 'contextMenuClick') {
+        explainSelection();
+    }
+});
+
 // Add a listener for the keyboard shortcut "cmd + shift + E"
 document.addEventListener('keydown', (event) => {
-    const isMeta = event.metaKey; // Check if the Meta key is pressed
-    const isShift = event.shiftKey; // Check if the Shift key is pressed
-    const isE = event.key === 'e'; // Check if the pressed key is 'E'
+    const isMeta = event.metaKey;
+    const isShift = event.shiftKey;
+    const isE = event.key === 'e';
 
     if (isMeta && isShift && isE) {
         chrome.runtime.sendMessage({ type: 'open_side_panel' });
         explainSelection();
-        event.preventDefault(); // Prevent default behavior to avoid conflicts
+        event.preventDefault();
     }
 
-    // Add ESC key handler
     if (event.key === 'Escape') {
-        // Close the side panel using Chrome's sidePanel API
         chrome.runtime.sendMessage({ type: 'close_side_panel' });
     }
 });
