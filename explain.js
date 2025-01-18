@@ -79,6 +79,19 @@ async function explainSelection() {
     const pageContext = getAllPageText();
     const explanation = await askChatGPT(selectedText, pageContext);
 
+    // Add to Anki
+    try {
+        await window.ankiConnect.addToAnki(
+            selectedText,
+            explanation,
+            window.location.href,
+            document.title
+        );
+        console.log('Successfully added to Anki');
+    } catch (error) {
+        console.error('Failed to add to Anki:', error);
+    }
+
     chrome.runtime.sendMessage({
         action: 'showExplanation',
         selectedText: selectedText,
@@ -97,5 +110,11 @@ document.addEventListener('keydown', (event) => {
         chrome.runtime.sendMessage({ type: 'open_side_panel' });
         explainSelection();
         event.preventDefault(); // Prevent default behavior to avoid conflicts
+    }
+
+    // Add ESC key handler
+    if (event.key === 'Escape') {
+        // Close the side panel using Chrome's sidePanel API
+        chrome.runtime.sendMessage({ type: 'close_side_panel' });
     }
 });

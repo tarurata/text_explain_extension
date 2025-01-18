@@ -1,3 +1,6 @@
+// Create a Set to track tabs with open side panels
+const openSidePanelTabs = new Set();
+
 chrome.runtime.onInstalled.addListener(() => {
     chrome.contextMenus.create({
         id: 'openSidePanel',
@@ -24,6 +27,9 @@ chrome.runtime.onMessage.addListener((message, sender) => {
                 });
             }
             openSidePanelTabs.add(sender.tab.id);
+//        } else if (message.type === 'close_side_panel') {
+//            await chrome.sidePanel.setOptions({ enabled: false });
+//            //openSidePanelTabs.delete(sender.tab.id);
         } else if (message.action === 'showExplanation') {
             // Store the explanation with the tab ID
             await chrome.storage.local.set({
@@ -33,4 +39,9 @@ chrome.runtime.onMessage.addListener((message, sender) => {
             });
         }
     })();
+});
+
+// Clean up when tabs are closed
+chrome.tabs.onRemoved.addListener((tabId) => {
+    openSidePanelTabs.delete(tabId);
 });

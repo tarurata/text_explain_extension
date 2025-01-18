@@ -27,6 +27,7 @@
             margin: 10px 0;
             background-color: #f5f5f5;
             border-left: 4px solid #4CAF50;
+            font-size: 1.6em;
             font-style: italic;
         }
 
@@ -43,7 +44,11 @@
     </div>
     <div id="selectedText">No text selected</div>
     <div id="explanation">Select text on the page to get an explanation.</div>
-    <script src="sidepanel.js"></script>
+    <button id="addToAnki"
+        style="margin: 10px; padding: 8px 15px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        Add to Anki
+    </button>
+    <script src="sidepanel.js" type="module"></script>
 </body>
 
 </html>

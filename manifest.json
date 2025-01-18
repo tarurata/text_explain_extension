@@ -12,7 +12,9 @@
         "storage"
     ],
     "host_permissions": [
-        "<all_urls>"
+        "<all_urls>",
+        "http://127.0.0.1/*",
+        "http://localhost/*"
     ],
     "action": {
         "default_icon": "icon.png"
@@ -26,6 +28,7 @@
                 "<all_urls>"
             ],
             "js": [
+                "ankiConnect.js",
                 "explain.js"
             ]
         }
@@ -33,5 +36,8 @@
     "background": {
         "service_worker": "service-worker.js"
     },
-    "options_page": "options.html"
+    "options_page": "options.html",
+    "content_security_policy": {
+        "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' http://127.0.0.1:8765 http://localhost:8765;"
+    }
 }
