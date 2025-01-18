@@ -8,9 +8,40 @@ function getAllPageText() {
     return document.body.innerText.trim();
 }
 
-// Function to get selected text
-function getSelectedText() {
-    return window.getSelection().toString().trim();
+// Function to get selected text with surrounding context
+function getSelectedTextWithContext() {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return { selected: '', context: '' };
+
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    const fullText = container.textContent;
+
+    // Get the selected text
+    const selected = selection.toString().trim();
+    const selectionStart = fullText.indexOf(selected);
+
+    // Find sentence boundaries
+    const sentences = fullText.match(/[^.!?]+[.!?]+/g) || [];
+    let contextStart = 0;
+    let contextEnd = fullText.length;
+    let selectedSentenceIndex = -1;
+
+    // Find the sentence containing the selection
+    let currentPosition = 0;
+    sentences.forEach((sentence, index) => {
+        if (currentPosition <= selectionStart && selectionStart < currentPosition + sentence.length) {
+            selectedSentenceIndex = index;
+        }
+        currentPosition += sentence.length;
+    });
+
+    // Get 2 sentences before and 2 sentences after
+    const startIndex = Math.max(0, selectedSentenceIndex - 2);
+    const endIndex = Math.min(sentences.length - 1, selectedSentenceIndex + 2);
+    const context = sentences.slice(startIndex, endIndex + 1).join(' ').trim();
+
+    return { selected, context };
 }
 
 // Function to send request to ChatGPT API
@@ -55,7 +86,7 @@ async function askChatGPT(selectedText, context) {
 
 // Main function to execute the explanation
 async function explainSelection() {
-    const selectedText = getSelectedText();
+    const { selected: selectedText, context: surroundingContext } = getSelectedTextWithContext();
     if (!selectedText) {
         console.log('You didn\'t choose any words.');
         return;
@@ -70,6 +101,7 @@ async function explainSelection() {
         await chrome.runtime.sendMessage({
             type: 'open_side_panel',
             selectedText: selectedText,
+            surroundingContext: surroundingContext,
             pageInfo: pageInfo
         });
     } catch (error) {
@@ -85,7 +117,8 @@ async function explainSelection() {
             selectedText,
             explanation,
             window.location.href,
-            document.title
+            document.title,
+            surroundingContext  // Adding the surrounding context
         );
         console.log('Successfully added to Anki');
     } catch (error) {
@@ -96,7 +129,8 @@ async function explainSelection() {
         action: 'showExplanation',
         selectedText: selectedText,
         explanation: explanation,
-        pageInfo: pageInfo
+        pageInfo: pageInfo,
+        surroundingContext: surroundingContext
     });
 }
 

@@ -40,7 +40,8 @@ chrome.runtime.onMessage.addListener((message, sender) => {
             await chrome.storage.local.set({
                 [`explanation_${sender.tab.id}`]: message.explanation,
                 [`selectedText_${sender.tab.id}`]: message.selectedText,
-                [`pageInfo_${sender.tab.id}`]: message.pageInfo
+                [`pageInfo_${sender.tab.id}`]: message.pageInfo,
+                [`surroundingContext_${sender.tab.id}`]: message.surroundingContext
             });
         }
     })();

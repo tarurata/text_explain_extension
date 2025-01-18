@@ -16,15 +16,20 @@ function displayExplanation(explanation) {
     explanationDiv.innerText = explanation;
 }
 
+function displaySurroundingContext(context) {
+    const surroundingContextDiv = document.getElementById('surroundingContext');
+    surroundingContextDiv.innerText = context;
+}
+
 function addAnkiButtonListener() {
     document.getElementById('addToAnki').addEventListener('click', async () => {
         const selectedText = document.getElementById('selectedText').innerText;
         const explanation = document.getElementById('explanation').innerText;
         const pageUrl = document.getElementById('pageUrl').innerText;
         const pageTitle = document.getElementById('pageTitle').innerText;
-
+        const surroundingContext = document.getElementById('surroundingContext').innerText;
         try {
-            await window.ankiConnect.addToAnki(selectedText, explanation, pageUrl, pageTitle);
+            await window.ankiConnect.addToAnki(selectedText, explanation, pageUrl, pageTitle, surroundingContext);
             alert('Successfully added to Anki!');
         } catch (error) {
             alert('Failed to add to Anki. Make sure Anki is running with AnkiConnect installed.');
@@ -40,16 +45,18 @@ async function loadTabSpecificExplanation() {
         const data = await chrome.storage.local.get([
             `explanation_${tabId}`,
             `selectedText_${tabId}`,
-            `pageInfo_${tabId}`
+            `pageInfo_${tabId}`,
+            `surroundingContext_${tabId}`
         ]);
 
         const explanation = data[`explanation_${tabId}`] || 'Select text on the page to get an explanation.';
         const selectedText = data[`selectedText_${tabId}`] || 'No text selected';
         const pageInfo = data[`pageInfo_${tabId}`] || { title: 'No page loaded', url: '' };
-
+        const surroundingContext = data[`surroundingContext_${tabId}`] || 'No surrounding context';
         displayPageInfo(pageInfo);
         displaySelectedText(selectedText);
         displayExplanation(explanation);
+        displaySurroundingContext(surroundingContext);
     } catch (error) {
         console.error('Error loading tab-specific explanation:', error);
     }
@@ -73,6 +80,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         displayPageInfo(request.pageInfo);
         displaySelectedText(request.selectedText);
         displayExplanation(request.explanation);
+        displaySurroundingContext(request.surroundingContext);
     } else if (request.action === 'close_side_panel') {
         window.close();
     }

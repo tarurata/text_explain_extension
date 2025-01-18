@@ -28,7 +28,7 @@ window.ankiConnect = {
         });
     },
 
-    addToAnki: async function (selectedText, explanation, pageUrl, pageTitle) {
+    addToAnki: async function (selectedText, explanation, pageUrl, pageTitle, surroundingContext) {
         try {
             // First, ensure the deck exists
             await this.invoke('createDeck', 6, { deck: 'WebExplanations' });
@@ -42,7 +42,8 @@ window.ankiConnect = {
                         Front: selectedText,
                         Back: explanation,
                         pageUrl: pageUrl,
-                        pageTitle: pageTitle
+                        pageTitle: pageTitle,
+                        surroundingContext: surroundingContext
                     },
                     options: {
                         allowDuplicate: true,
