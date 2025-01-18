@@ -14,32 +14,30 @@ function getSelectedTextWithContext() {
     if (!selection.rangeCount) return { selected: '', context: '' };
 
     const range = selection.getRangeAt(0);
-    const container = range.commonAncestorContainer;
-    const fullText = container.textContent;
-
-    // Get the selected text
     const selected = selection.toString().trim();
+
+    // Get the containing element
+    let container = range.startContainer;
+    while (container && container.nodeName !== 'BODY' &&
+        !['P', 'DIV', 'ARTICLE', 'SECTION'].includes(container.nodeName)) {
+        container = container.parentNode;
+    }
+
+    const fullText = container.textContent;
     const selectionStart = fullText.indexOf(selected);
 
-    // Find sentence boundaries
-    const sentences = fullText.match(/[^.!?]+[.!?]+/g) || [];
-    let contextStart = 0;
-    let contextEnd = fullText.length;
-    let selectedSentenceIndex = -1;
+    if (selectionStart === -1) return { selected, context: selected };
 
-    // Find the sentence containing the selection
-    let currentPosition = 0;
-    sentences.forEach((sentence, index) => {
-        if (currentPosition <= selectionStart && selectionStart < currentPosition + sentence.length) {
-            selectedSentenceIndex = index;
-        }
-        currentPosition += sentence.length;
-    });
+    // Get 200 characters before and after the selection
+    const contextLength = 250;
+    const contextStart = Math.max(0, selectionStart - contextLength);
+    const contextEnd = Math.min(fullText.length, selectionStart + selected.length + contextLength);
 
-    // Get 2 sentences before and 2 sentences after
-    const startIndex = Math.max(0, selectedSentenceIndex - 2);
-    const endIndex = Math.min(sentences.length - 1, selectedSentenceIndex + 2);
-    const context = sentences.slice(startIndex, endIndex + 1).join(' ').trim();
+    let context = fullText.slice(contextStart, contextEnd);
+
+    // Add ellipsis if we're not at the start/end
+    if (contextStart > 0) context = '...' + context;
+    if (contextEnd < fullText.length) context = context + '...';
 
     return { selected, context };
 }
@@ -118,7 +116,7 @@ async function explainSelection() {
             explanation,
             window.location.href,
             document.title,
-            surroundingContext  // Adding the surrounding context
+            surroundingContext
         );
         console.log('Successfully added to Anki');
     } catch (error) {
