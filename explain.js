@@ -64,7 +64,7 @@ async function askChatGPT(selectedText, context) {
                 model: "gpt-4o-mini",
                 messages: [{
                     role: "user",
-                    content: `Concisely explain "${selectedText}" with the context of this text: ${context}`
+                    content: `Concisely explain "${selectedText}". If it includes phrases, explain the phrases, too. Context: ${context}`
                 }],
                 max_tokens: 5000
             })
