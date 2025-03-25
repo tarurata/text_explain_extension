@@ -1,11 +1,14 @@
 // Function to get all text content from the webpage
 function getAllPageText() {
-    // Remove script and style elements to get only visible text
-    const scripts = document.querySelectorAll('script, style');
+    // Create a clone of the body to avoid modifying the original DOM
+    const bodyClone = document.body.cloneNode(true);
+
+    // Remove script and style elements from the clone
+    const scripts = bodyClone.querySelectorAll('script, style');
     scripts.forEach(script => script.remove());
 
-    // Get text from body
-    return document.body.innerText.trim();
+    // Get text from the clone
+    return bodyClone.innerText.trim();
 }
 
 // Function to get selected text with surrounding context
@@ -64,7 +67,7 @@ async function askChatGPT(selectedText, context) {
                 model: "gpt-4o-mini",
                 messages: [{
                     role: "user",
-                    content: `Concisely explain "${selectedText}". If it includes phrases, explain the phrases, too. Context: ${context}`
+                    content: `Concisely explain "${selectedText}". If it includes phrases, explain the phrases, too. Use <br> to break the text into lines. Context: ${context}`
                 }],
                 max_tokens: 5000
             })

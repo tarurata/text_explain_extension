@@ -56,6 +56,7 @@ window.ankiConnect = {
             return result;
         } catch (error) {
             console.error('Error adding note to Anki:', error);
+            alert(`Failed to add note to Anki: ${error}`);
             throw error;
         }
     }
