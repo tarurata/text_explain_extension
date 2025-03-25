@@ -30,13 +30,18 @@ window.ankiConnect = {
 
     addToAnki: async function (selectedText, explanation, pageUrl, pageTitle, surroundingContext) {
         try {
+            // Determine the deck name based on URL
+            const deckName = (pageUrl.includes('comptia-security') || pageUrl.includes('securityplus'))
+                ? 'CompTIA Security+'
+                : 'WebExplanations';
+
             // First, ensure the deck exists
-            await this.invoke('createDeck', 6, { deck: 'WebExplanations' });
+            await this.invoke('createDeck', 6, { deck: deckName });
 
             // Add the note
             const result = await this.invoke('addNote', 6, {
                 note: {
-                    deckName: 'WebExplanations',
+                    deckName: deckName,
                     modelName: 'WebExplanationTemplate',
                     fields: {
                         Front: selectedText,
