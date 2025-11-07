@@ -47,16 +47,32 @@ function getSelectedTextWithContext() {
 
 // Function to send request to ChatGPT API
 async function askChatGPT(selectedText, context) {
-    // Get the API key from storage
     const result = await chrome.storage.local.get('openaiApiKey');
     const OPENAI_API_KEY = result.openaiApiKey;
 
     if (!OPENAI_API_KEY) {
-        return 'Please set your OpenAI API key in the extension settings (right-click the extension icon and select "Options")';
+        const errorMessage = 'OpenAI API key not found. Please set it in the extension settings.';
+        console.error(errorMessage);
+        return errorMessage;
     }
 
+    const loadingMessage = 'Generating explanation...';
     try {
-        console.log('Sending request to ChatGPT with selected text:', selectedText); // Debug log
+        // Notify user that processing has started
+        chrome.runtime.sendMessage({
+            action: 'showExplanation',
+            selectedText,
+            explanation: loadingMessage
+        });
+
+        const pageUrl = window.location.href;
+        const isSecurityPlus = pageUrl.toLowerCase().includes('securityplus') ||
+            pageUrl.toLowerCase().includes('comptia_security');
+
+        const promptContent = isSecurityPlus
+            ? `Concisely explain "${selectedText}" in the context of CompTIA Security+ in easy English. Use <br> to break the text into lines. Context: ${context}`
+            : `Concisely explain "${selectedText}". The etymology of the word is also important. If it includes phrases, explain the phrases, too. Use <br> to break the text into lines. Context: ${context}`;
+
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -67,21 +83,29 @@ async function askChatGPT(selectedText, context) {
                 model: "gpt-4o-mini",
                 messages: [{
                     role: "user",
-                    content: `Concisely explain "${selectedText}". If it includes phrases, explain the phrases, too. Use <br> to break the text into lines. Context: ${context}`
+                    content: promptContent
                 }],
                 max_tokens: 5000
             })
         });
 
-        const data = await response.json();
         if (!response.ok) {
-            throw new Error(data.error?.message || 'API request failed');
+            const errorData = await response.json();
+            const errorMessage = errorData.error?.message || 'API request failed';
+            console.error('OpenAI API Error:', errorMessage);
+            throw new Error(errorMessage);
         }
-        console.log('Received response from ChatGPT:', data); // Debug log
+
+        const data = await response.json();
+        if (!data.choices?.[0]?.message?.content) {
+            throw new Error('Invalid response format from OpenAI API');
+        }
+
         return data.choices[0].message.content;
     } catch (error) {
-        console.error('Error:', error);
-        return `Error: ${error.message}`;
+        const errorMessage = `Failed to get explanation: ${error.message}`;
+        console.error(errorMessage);
+        return errorMessage;
     }
 }
 
