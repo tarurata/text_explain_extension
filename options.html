@@ -10,8 +10,22 @@
         }
 
         .container {
-            max-width: 500px;
+            max-width: 700px;
             margin: 0 auto;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .section h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #333;
         }
 
         .form-group {
@@ -23,10 +37,86 @@
             margin-bottom: 5px;
         }
 
-        input[type="text"] {
+        input[type="text"],
+        input[type="number"],
+        textarea {
             width: 100%;
             padding: 8px;
             margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+
+        input[type="number"] {
+            width: 150px;
+        }
+
+        input[type="checkbox"] {
+            margin-right: 5px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+        }
+
+        .category-item {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            background-color: white;
+        }
+
+        .category-item.default-category {
+            border: 2px solid #4CAF50;
+            background-color: #f0f8f0;
+        }
+
+        .category-item.default-category .category-item-header h4::after {
+            content: " (Default)";
+            color: #4CAF50;
+            font-weight: normal;
+            font-size: 0.9em;
+        }
+
+        .category-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .category-item-header h4 {
+            margin: 0;
+        }
+
+        .btn-remove {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .btn-add {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .default-category-select {
+            margin-bottom: 15px;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: monospace;
         }
 
         button {
@@ -48,17 +138,96 @@
             background-color: #dff0d8;
             color: #3c763d;
         }
+
+        small {
+            display: block;
+            color: #666;
+            font-size: 12px;
+            margin-top: 5px;
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
         <h2>Extension Settings</h2>
-        <div class="form-group">
-            <label for="apiKey">OpenAI API Key:</label>
-            <input type="text" id="apiKey" placeholder="Enter your OpenAI API key">
-            <button id="save">Save</button>
+
+        <!-- API Configuration Section -->
+        <div class="section">
+            <h3>API Configuration</h3>
+            <div class="form-group">
+                <label for="apiKey">OpenAI API Key:</label>
+                <input type="text" id="apiKey" placeholder="Enter your OpenAI API key">
+            </div>
+            <div class="form-group">
+                <label for="openaiModel">OpenAI Model:</label>
+                <input type="text" id="openaiModel" placeholder="gpt-4o-mini">
+                <small>Model to use (e.g., gpt-4o-mini, gpt-4, gpt-3.5-turbo)</small>
+            </div>
+            <div class="form-group">
+                <label for="maxTokens">Max Tokens:</label>
+                <input type="number" id="maxTokens" min="1" max="32000" placeholder="5000">
+                <small>Maximum tokens in the response (1-32000)</small>
+            </div>
+            <div class="form-group">
+                <label for="temperature">Temperature:</label>
+                <input type="number" id="temperature" min="0" max="2" step="0.1" placeholder="1.0">
+                <small>Controls randomness (0.0 = deterministic, 2.0 = very creative)</small>
+            </div>
         </div>
+
+        <!-- Anki Configuration Section -->
+        <div class="section">
+            <h3>Anki Configuration</h3>
+            <div class="form-group">
+                <label for="ankiConnectUrl">Anki Connect URL:</label>
+                <input type="text" id="ankiConnectUrl" placeholder="http://127.0.0.1:8765">
+                <small>Enter the URL where Anki Connect is running (default: http://127.0.0.1:8765)</small>
+            </div>
+            <div class="form-group">
+                <label for="ankiModelName">Anki Note Type (Model Name):</label>
+                <input type="text" id="ankiModelName" placeholder="WebExplanationTemplate">
+                <small>The name of the note type in Anki</small>
+            </div>
+            <div class="form-group">
+                <label for="ankiTags">Anki Tags (comma-separated):</label>
+                <input type="text" id="ankiTags" placeholder="web_explanation">
+                <small>Tags to add to Anki cards (separate multiple tags with commas)</small>
+            </div>
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="autoAddToAnki">
+                <label for="autoAddToAnki">Automatically add cards to Anki</label>
+            </div>
+        </div>
+
+        <!-- Category Management Section -->
+        <div class="section">
+            <h3>Category Management</h3>
+            <div class="form-group">
+                <label for="categoryDetectionPrompt">Category Detection Prompt:</label>
+                <textarea id="categoryDetectionPrompt"
+                    placeholder="Analyze the following page content and determine which category it belongs to. Available categories: {categories}. Respond with only the category name. Page content: {pageContent}"></textarea>
+                <small>Prompt to detect content category. Use {pageContent} and {categories} as placeholders. The AI
+                    will respond with a category name from the available categories.</small>
+            </div>
+            <div id="categoriesContainer">
+                <!-- Categories will be added here dynamically -->
+            </div>
+            <button type="button" class="btn-add" id="addCategoryBtn">+ Add Category</button>
+        </div>
+
+        <!-- Context Settings Section -->
+        <div class="section">
+            <h3>Context Settings</h3>
+            <div class="form-group">
+                <label for="contextLength">Context Length (characters):</label>
+                <input type="number" id="contextLength" min="0" max="5000" placeholder="250">
+                <small>Number of characters to include before and after selected text</small>
+            </div>
+        </div>
+
+        <button id="save" style="width: 100%; padding: 12px; font-size: 16px; margin-top: 20px;">Save All
+            Settings</button>
         <div id="status" class="status"></div>
     </div>
     <script src="options.js"></script>
