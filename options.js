@@ -33,14 +33,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const defaultAnkiConnectUrl = 'http://127.0.0.1:8765';
     document.getElementById('ankiConnectUrl').value = result.ankiConnectUrl || defaultAnkiConnectUrl;
 
-    const defaultAnkiModelName = 'WebExplanationTemplate';
-    document.getElementById('ankiModelName').value = result.ankiModelName || defaultAnkiModelName;
-
-    const defaultGeneralDeckName = 'WebExplanations';
-    document.getElementById('generalDeckName').value = result.generalDeckName || defaultGeneralDeckName;
-
-    const defaultAnkiTags = 'web_explanation';
-    document.getElementById('ankiTags').value = result.ankiTags || defaultAnkiTags;
+    // Note: Anki Model Name and Tags are now per-category, not global
+    // Keeping these for backward compatibility and as defaults for new categories
+    const defaultAnkiModelName = result.ankiModelName || 'WebExplanationTemplate';
+    const defaultAnkiTags = result.ankiTags || 'web_explanation';
 
     document.getElementById('autoAddToAnki').checked = result.autoAddToAnki !== false; // Default to true
 
@@ -51,7 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load categories
     let categories = result.categories || [];
 
-    // If no categories exist, create a default one
+    // If no categories exist, create a default one and save it immediately
     if (categories.length === 0) {
         const defaultGeneralPrompt = `Concisely explain "{selectedText}". The etymology of the word is also important. If it includes phrases, explain the phrases, too. Use <br> to break the text into lines. Context: {context}`;
         const defaultDeckName = 'WebExplanations';
@@ -61,9 +57,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             {
                 name: 'General',
                 prompt: defaultGeneralPrompt,
-                deckName: defaultDeckName
+                deckName: defaultDeckName,
+                ankiModelName: defaultAnkiModelName,
+                ankiTags: defaultAnkiTags
             }
         ];
+
+        // Save the default category immediately
+        await chrome.storage.local.set({ categories: categories });
     }
 
     // Context Settings
@@ -82,7 +83,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const removeButton = isDefault
             ? '<span style="color: #999; font-size: 0.9em;">Cannot remove default category</span>'
-            : `<button type="button" class="btn-remove" onclick="removeCategory(${index})">Remove</button>`;
+            : `<button type="button" class="btn-remove" data-category-index="${index}">Remove</button>`;
+
+        // Get default values from global settings if not set in category
+        const defaultAnkiModelName = result.ankiModelName || 'WebExplanationTemplate';
+        const defaultAnkiTags = result.ankiTags || 'web_explanation';
+        const categoryAnkiModelName = category.ankiModelName || defaultAnkiModelName;
+        const categoryAnkiTags = category.ankiTags || defaultAnkiTags;
 
         categoryDiv.innerHTML = `
             <div class="category-item-header">
@@ -101,6 +108,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="form-group">
                 <label>Deck Name:</label>
                 <input type="text" class="category-deck" value="${escapeHtml(category.deckName || '')}" placeholder="Deck name in Anki">
+            </div>
+            <div class="form-group">
+                <label>Anki Note Type (Model Name):</label>
+                <input type="text" class="category-anki-model" value="${escapeHtml(categoryAnkiModelName)}" placeholder="WebExplanationTemplate">
+                <small>The name of the note type in Anki for this category</small>
+            </div>
+            <div class="form-group">
+                <label>Anki Tags (comma-separated):</label>
+                <input type="text" class="category-anki-tags" value="${escapeHtml(categoryAnkiTags)}" placeholder="web_explanation">
+                <small>Tags to add to Anki cards for this category (separate multiple tags with commas)</small>
             </div>
         `;
 
@@ -121,21 +138,103 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    window.removeCategory = function (index) {
+    // Set up modal event listeners once
+    let currentConfirmCallback = null;
+    const modal = document.getElementById('confirmModal');
+    const messageEl = document.getElementById('confirmMessage');
+    const cancelBtn = document.getElementById('confirmCancel');
+    const okBtn = document.getElementById('confirmOk');
+
+    cancelBtn.addEventListener('click', () => {
+        modal.classList.remove('show');
+        currentConfirmCallback = null;
+    });
+
+    okBtn.addEventListener('click', () => {
+        if (currentConfirmCallback) {
+            currentConfirmCallback();
+            currentConfirmCallback = null;
+        }
+        modal.classList.remove('show');
+    });
+
+    // Close on overlay click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('show');
+            currentConfirmCallback = null;
+        }
+    });
+
+    function showConfirmModal(message, onConfirm) {
+        messageEl.textContent = message;
+        currentConfirmCallback = onConfirm;
+        modal.classList.add('show');
+    }
+
+    function removeCategory(index) {
         // Prevent removing the first category (default category)
         if (index === 0) {
+            showConfirmModal('Cannot remove the default category. The first category must always remain.', () => { });
             return;
         }
-        categories.splice(index, 1);
-        renderCategories();
-    };
+
+        // Validate index
+        if (index < 0 || index >= categories.length) {
+            console.error('Invalid category index:', index);
+            return;
+        }
+
+        // Get category name for confirmation message
+        const categoryName = categories[index].name || `Category ${index + 1}`;
+
+        // Show custom confirmation modal
+        showConfirmModal(
+            `Are you sure you want to remove "${categoryName}"?\n\nThis action cannot be undone.`,
+            () => {
+                // Remove the category
+                categories.splice(index, 1);
+
+                // Re-render to update the UI
+                renderCategories();
+
+                // Show a brief visual feedback
+                const status = document.getElementById('status');
+                if (status) {
+                    status.textContent = `Category "${categoryName}" has been removed.`;
+                    status.className = 'status';
+                    status.style.display = 'block';
+                    status.style.backgroundColor = '#dff0d8';
+                    status.style.color = '#3c763d';
+
+                    setTimeout(() => {
+                        status.style.display = 'none';
+                    }, 3000);
+                }
+            }
+        );
+    }
+
+    // Use event delegation for remove buttons
+    categoriesContainer.addEventListener('click', (event) => {
+        if (event.target.classList.contains('btn-remove')) {
+            const index = parseInt(event.target.getAttribute('data-category-index'), 10);
+            if (!isNaN(index)) {
+                removeCategory(index);
+            }
+        }
+    });
 
     document.getElementById('addCategoryBtn').addEventListener('click', () => {
         const defaultPrompt = `Concisely explain "{selectedText}". Use <br> to break the text into lines. Context: {context}`;
+        const defaultAnkiModelName = result.ankiModelName || 'WebExplanationTemplate';
+        const defaultAnkiTags = result.ankiTags || 'web_explanation';
         categories.push({
             name: '',
             prompt: defaultPrompt,
-            deckName: ''
+            deckName: '',
+            ankiModelName: defaultAnkiModelName,
+            ankiTags: defaultAnkiTags
         });
         renderCategories();
     });
@@ -151,8 +250,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const maxTokens = parseInt(document.getElementById('maxTokens').value) || 5000;
             const temperature = parseFloat(document.getElementById('temperature').value) || 1.0;
             const ankiConnectUrl = document.getElementById('ankiConnectUrl').value.trim();
-            const ankiModelName = document.getElementById('ankiModelName').value.trim();
-            const ankiTags = document.getElementById('ankiTags').value.trim();
+            // Note: ankiModelName and ankiTags are now per-category
             const autoAddToAnki = document.getElementById('autoAddToAnki').checked;
             const categoryDetectionPrompt = document.getElementById('categoryDetectionPrompt').value.trim();
             const contextLength = parseInt(document.getElementById('contextLength').value) || 250;
@@ -164,12 +262,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const name = element.querySelector('.category-name').value.trim();
                 const prompt = element.querySelector('.category-prompt').value.trim();
                 const deckName = element.querySelector('.category-deck').value.trim();
+                const ankiModelName = element.querySelector('.category-anki-model').value.trim();
+                const ankiTags = element.querySelector('.category-anki-tags').value.trim();
 
                 if (name) { // Only save categories with names
                     savedCategories.push({
                         name: name,
                         prompt: prompt,
-                        deckName: deckName
+                        deckName: deckName,
+                        ankiModelName: ankiModelName,
+                        ankiTags: ankiTags
                     });
                 }
             });
@@ -178,10 +280,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (savedCategories.length === 0) {
                 const defaultPrompt = `Concisely explain "{selectedText}". The etymology of the word is also important. If it includes phrases, explain the phrases, too. Use <br> to break the text into lines. Context: {context}`;
                 const defaultDeckName = 'WebExplanations';
+                const defaultAnkiModelName = ankiModelName || 'WebExplanationTemplate';
+                const defaultAnkiTags = ankiTags || 'web_explanation';
                 savedCategories.push({
                     name: 'General',
                     prompt: defaultPrompt,
-                    deckName: defaultDeckName
+                    deckName: defaultDeckName,
+                    ankiModelName: defaultAnkiModelName,
+                    ankiTags: defaultAnkiTags
                 });
             }
 
@@ -200,8 +306,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 maxTokens: maxTokens,
                 temperature: temperature,
                 ankiConnectUrl: ankiConnectUrl,
-                ankiModelName: ankiModelName,
-                ankiTags: ankiTags,
+                // Note: ankiModelName and ankiTags are now stored per-category
                 autoAddToAnki: autoAddToAnki,
                 categoryDetectionPrompt: categoryDetectionPrompt,
                 categories: savedCategories,

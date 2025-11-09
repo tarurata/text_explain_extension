@@ -52,26 +52,67 @@ window.ankiConnect = {
 
             // Get configurable settings
             const settings = await chrome.storage.local.get([
-                'ankiModelName',
-                'ankiTags',
+                'ankiModelName', // For backward compatibility
+                'ankiTags', // For backward compatibility
                 'categories'
             ]);
 
-            const modelName = settings.ankiModelName || 'WebExplanationTemplate';
             const categories = settings.categories || [];
 
-            // Determine deck name based on category
-            // Default to first category's deck name, or fallback to 'WebExplanations'
-            let deckName = categories[0]?.deckName || 'WebExplanations';
+            // Determine category-specific settings
+            let deckName = 'WebExplanations';
+            let modelName = settings.ankiModelName || 'WebExplanationTemplate';
+            let tags = ['web_explanation']; // Default tag
 
             if (category && categories.length > 0) {
                 // Try to find the category in the user-defined categories
                 const categoryObj = categories.find(cat => cat.name === category);
-                if (categoryObj && categoryObj.deckName) {
-                    deckName = categoryObj.deckName;
+                if (categoryObj) {
+                    deckName = categoryObj.deckName || categories[0]?.deckName || 'WebExplanations';
+                    modelName = categoryObj.ankiModelName || settings.ankiModelName || 'WebExplanationTemplate';
+                    // Parse tags from category
+                    if (categoryObj.ankiTags) {
+                        if (typeof categoryObj.ankiTags === 'string') {
+                            tags = categoryObj.ankiTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+                        } else if (Array.isArray(categoryObj.ankiTags)) {
+                            tags = categoryObj.ankiTags;
+                        }
+                    } else if (settings.ankiTags) {
+                        // Fallback to global settings for backward compatibility
+                        if (typeof settings.ankiTags === 'string') {
+                            tags = settings.ankiTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+                        } else if (Array.isArray(settings.ankiTags)) {
+                            tags = settings.ankiTags;
+                        }
+                    }
                 } else {
-                    // If category not found, use first category (default) deck name
-                    deckName = categories[0].deckName || 'WebExplanations';
+                    // If category not found, use first category (default) settings
+                    const defaultCategory = categories[0];
+                    if (defaultCategory) {
+                        deckName = defaultCategory.deckName || 'WebExplanations';
+                        modelName = defaultCategory.ankiModelName || settings.ankiModelName || 'WebExplanationTemplate';
+                        if (defaultCategory.ankiTags) {
+                            if (typeof defaultCategory.ankiTags === 'string') {
+                                tags = defaultCategory.ankiTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+                            } else if (Array.isArray(defaultCategory.ankiTags)) {
+                                tags = defaultCategory.ankiTags;
+                            }
+                        }
+                    }
+                }
+            } else {
+                // No category specified, use first category (default) settings
+                const defaultCategory = categories[0];
+                if (defaultCategory) {
+                    deckName = defaultCategory.deckName || 'WebExplanations';
+                    modelName = defaultCategory.ankiModelName || settings.ankiModelName || 'WebExplanationTemplate';
+                    if (defaultCategory.ankiTags) {
+                        if (typeof defaultCategory.ankiTags === 'string') {
+                            tags = defaultCategory.ankiTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+                        } else if (Array.isArray(defaultCategory.ankiTags)) {
+                            tags = defaultCategory.ankiTags;
+                        }
+                    }
                 }
             }
 
@@ -84,15 +125,7 @@ window.ankiConnect = {
             // Create deck if it doesn't exist
             await this.invoke('createDeck', 6, { deck: deckName });
 
-            // Parse tags (comma-separated string or array)
-            let tags = ['web_explanation']; // Default tag
-            if (settings.ankiTags) {
-                if (typeof settings.ankiTags === 'string') {
-                    tags = settings.ankiTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-                } else if (Array.isArray(settings.ankiTags)) {
-                    tags = settings.ankiTags;
-                }
-            }
+            // Tags are already parsed above based on category
 
             // Add the note with sanitized input
             const result = await this.invoke('addNote', 6, {
